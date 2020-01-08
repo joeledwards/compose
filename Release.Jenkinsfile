@@ -2,7 +2,7 @@
 
 def dockerVersions = ['19.03.5', '18.09.9']
 def baseImages = ['alpine', 'debian']
-def pythonVersions = ['py27', 'py37']
+def pythonVersions = ['py37']
 
 pipeline {
     agent none
@@ -179,17 +179,10 @@ pipeline {
                         checkout scm
                         withCredentials([file(credentialsId: 'pypirc-docker-dsg-cibot', variable: 'PYPIRC')]) {
                             sh """
-                                virtualenv venv-publish
-                                source venv-publish/bin/activate
-                                python setup.py sdist bdist_wheel
-                                pip install twine
+                                pip3 install --user twine wheel
+                                python3 setup.py sdist bdist_wheel
                                 twine upload --config-file ${PYPIRC} ./dist/docker-compose-${env.TAG_NAME}.tar.gz ./dist/docker_compose-${env.TAG_NAME}-py2.py3-none-any.whl
                             """
-                        }
-                    }
-                    post {
-                        always {
-                            sh 'deactivate; rm -rf venv-publish'
                         }
                     }
                 }
@@ -293,9 +286,7 @@ def githubRelease() {
         info.body = changelog
 
 
-        // Convert from Map --> JSON
-        def outJson = groovy.json.JsonOutput.toJson(info)
-        writeJSON file: 'release.json', text: outJson, encoding: 'UTF-8'
+        writeFile file: 'release.json', text: groovy.json.JsonOutput.toJson(info)
 
         // debug
         sh("cat release.json")
